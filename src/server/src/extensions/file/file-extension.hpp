@@ -135,9 +135,7 @@ class FileExtension : public BuiltinCommandRepository {
 
 public:
   void initialized(const QJsonObject &preferences) const override {
-#ifdef Q_OS_LINUX
     ServiceRegistry::instance()->fileService()->preferenceValuesChanged(preferences);
-#endif
   }
 
   FileExtension() {
@@ -156,7 +154,14 @@ public:
   }
 
   std::vector<Preference> preferences() const override {
-#ifdef Q_OS_LINUX
+    auto defaultOrdering = Preference::makeCheckbox("defaultOrdering");
+    defaultOrdering.setTitle("Default file ordering");
+    defaultOrdering.setDescription(
+      "Prefer files you recently used, then fall back to file modification time when Vicinae does not have "
+      "stronger file usage knowledge.");
+    defaultOrdering.setDefaultValue(false);
+
+  #ifdef Q_OS_LINUX
     auto indexing = Preference::makeCheckbox("autoIndexing");
 
     indexing.setTitle("Enabled");
@@ -175,15 +180,13 @@ public:
     excludedPaths.setDescription("Directories to exclude from file indexing");
     excludedPaths.setDefaultValue(QJsonArray{});
 
-    return {indexing, paths, excludedPaths};
+    return {defaultOrdering, indexing, paths, excludedPaths};
 #else
-    return {};
+    return {defaultOrdering};
 #endif
   }
 
   void preferenceValuesChanged(const QJsonObject &preferences) const override {
-#ifdef Q_OS_LINUX
     ServiceRegistry::instance()->fileService()->preferenceValuesChanged(preferences);
-#endif
   }
 };
