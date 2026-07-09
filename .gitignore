@@ -16,6 +16,7 @@ __cmake*
 *.tgz
 
 /qt6
+**/.qmlls.ini
 
 /AppDir
 *AppImage
@@ -37,3 +38,4 @@ heaptrack*
 
 
 .worktrees
+.envrc.local
