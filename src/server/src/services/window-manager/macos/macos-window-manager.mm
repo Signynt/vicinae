@@ -2,6 +2,7 @@
 
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
+#include <IOKit/graphics/IOGraphicsTypes.h>
 
 #include <QFutureWatcher>
 #include <QPointer>
@@ -348,6 +349,73 @@ void MacosWindowManager::rebuildCache() {
 }
 
 AbstractWindowManager::WindowList MacosWindowManager::listWindowsSync() const { return m_cache; }
+
+static std::optional<QSize> displayScanoutSize(CGDirectDisplayID display) {
+  CGDisplayModeRef current = CGDisplayCopyDisplayMode(display);
+  if (!current) return std::nullopt;
+
+  const QSize pixels(CGDisplayModeGetPixelWidth(current), CGDisplayModeGetPixelHeight(current));
+  const bool scaled = CGDisplayModeGetPixelWidth(current) != CGDisplayModeGetWidth(current);
+  CGDisplayModeRelease(current);
+
+  if (!scaled) return pixels;
+
+  CFArrayRef modes = CGDisplayCopyAllDisplayModes(display, nullptr);
+  if (!modes) return pixels;
+
+  std::optional<QSize> native;
+
+  for (CFIndex i = 0; i < CFArrayGetCount(modes); ++i) {
+    auto mode = (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, i);
+
+    if (CGDisplayModeGetIOFlags(mode) & kDisplayModeNativeFlag) {
+      native = QSize(CGDisplayModeGetPixelWidth(mode), CGDisplayModeGetPixelHeight(mode));
+      break;
+    }
+  }
+
+  CFRelease(modes);
+  return native ? *native : pixels;
+}
+
+static CGDirectDisplayID screenDisplayId(NSScreen *screen) {
+  return (CGDirectDisplayID)[screen.deviceDescription[@"NSScreenNumber"] unsignedIntValue];
+}
+
+static std::optional<CGDirectDisplayID> windowDisplayId(QWindow *window) {
+  if (!window || !window->isVisible() || !window->handle()) return std::nullopt;
+
+  auto *view = (__bridge NSView *)reinterpret_cast<void *>(window->winId());
+  NSScreen *screen = view.window.screen;
+  if (!screen) return std::nullopt;
+
+  return screenDisplayId(screen);
+}
+
+std::vector<AbstractWindowManager::Screen> MacosWindowManager::listScreensSync(QWindow *activeWindow) const {
+  std::vector<Screen> screens;
+
+  @autoreleasepool {
+    auto activeDisplay = windowDisplayId(activeWindow);
+    NSArray<NSScreen *> *nsScreens = [NSScreen screens];
+    screens.reserve(nsScreens.count);
+
+    for (NSScreen *nsScreen in nsScreens) {
+      auto display = screenDisplayId(nsScreen);
+      const CGRect bounds = CGDisplayBounds(display);
+      const QSize logicalSize(qRound(bounds.size.width), qRound(bounds.size.height));
+
+      Screen screen{.name = QString::fromNSString(nsScreen.localizedName),
+                    .bounds = QRect(QPoint(qRound(bounds.origin.x), qRound(bounds.origin.y)), logicalSize),
+                    .physicalResolution =
+                        displayScanoutSize(display).value_or(logicalSize * nsScreen.backingScaleFactor)};
+      screen.active = activeDisplay == display;
+      screens.emplace_back(std::move(screen));
+    }
+  }
+
+  return screens;
+}
 
 AbstractWindowManager::WindowPtr MacosWindowManager::getFocusedWindowSync() const {
   if (!AXIsProcessTrusted()) return nullptr;

@@ -8,6 +8,7 @@
 #include "services/app-service/abstract-app-db.hpp"
 #include <QGuiApplication>
 #include <QScreen>
+#include <QWindow>
 #include <ranges>
 #include <vector>
 
@@ -39,10 +40,27 @@ public:
 
   struct Screen {
     QString name;
+
+    /**
+     * Screen geometry in Qt logical coordinates. Positions are meaningful across screens, but sizes are
+     * affected by display scaling: use `physicalResolution` to get the real pixel size of the screen.
+     */
     QRect bounds;
+
+    /**
+     * The real pixel size of the screen, unaffected by any kind of scaling.
+     */
+    QSize physicalResolution;
+
     QString manufacturer;
     QString model;
     std::optional<QString> serial;
+
+    /**
+     * Whether this screen currently displays the launcher window. Always false when the window
+     * is not shown.
+     */
+    bool active = false;
   };
 
   struct BlurConfig {
@@ -106,13 +124,20 @@ public:
 
   virtual WindowList listWindowsSync() const { return {}; };
 
-  virtual std::vector<Screen> listScreensSync() const {
-    auto tr = [](const QScreen *qtScreen) -> Screen {
+  /**
+   * List available screens, marking the one displaying `activeWindow` as active, if any.
+   */
+  virtual std::vector<Screen> listScreensSync(QWindow *activeWindow = nullptr) const {
+    const QScreen *activeScreen =
+        activeWindow && activeWindow->isVisible() ? activeWindow->screen() : nullptr;
+    auto tr = [&](const QScreen *qtScreen) -> Screen {
       Screen sc{.name = qtScreen->name(),
                 .bounds = qtScreen->geometry(),
+                .physicalResolution = qtScreen->size() * qtScreen->devicePixelRatio(),
                 .manufacturer = qtScreen->manufacturer(),
                 .model = qtScreen->model()};
       if (auto serial = qtScreen->serialNumber(); !serial.isEmpty()) { sc.serial = serial; }
+      sc.active = qtScreen == activeScreen;
       return sc;
     };
     return QGuiApplication::screens() | std::views::transform(tr) | std::ranges::to<std::vector>();
