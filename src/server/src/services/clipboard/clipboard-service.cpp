@@ -1,10 +1,13 @@
 #include <QClipboard>
 #include "clipboard-service.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <numeric>
 #include <QGuiApplication>
 #include "services/app-service/abstract-app-db.hpp"
+#ifdef Q_OS_LINUX
 #include "x11/x11-clipboard-server.hpp"
+#endif
 #include <qclipboard.h>
 #include <qimagereader.h>
 #include <qlogging.h>
@@ -23,8 +26,10 @@
 #include "services/clipboard/clipboard-server.hpp"
 #include "utils.hpp"
 #ifdef Q_OS_LINUX
+#ifdef Q_OS_LINUX
 #include "services/clipboard/gnome/gnome-clipboard-server.hpp"
 #include "data-control/data-control-clipboard-server.hpp"
+#endif
 #endif
 #ifdef Q_OS_MACOS
 #include "macos/macos-clipboard-server.hpp"
@@ -164,7 +169,8 @@ ClipboardOfferKind ClipboardService::getKind(const ClipboardDataOffer &offer) {
   if (offer.mimeType == "text/uri-list") {
     QString const text = offer.data;
     auto uris = text.split("\r\n", Qt::SkipEmptyParts);
-    if (uris.size() == 1 && QUrl(uris.front()).isLocalFile()) return ClipboardOfferKind::File;
+    auto isLocalFile = [](const QString &uri) { return QUrl(uri).isLocalFile(); };
+    if (!uris.isEmpty() && std::ranges::all_of(uris, isLocalFile)) return ClipboardOfferKind::File;
     return ClipboardOfferKind::Text;
   }
 
