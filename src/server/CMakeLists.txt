@@ -694,6 +694,16 @@ if (APPLE)
 		add_compile_definitions(AUTO_ENABLE_AUTOSTART)
 	endif()
 elseif (WIN32)
+	list(APPEND SRCS
+		src/ui/image/win-file-icon-loader.hpp
+		src/ui/image/win-file-icon-loader.cpp
+		src/services/app-service/windows/win-app.hpp
+		src/services/app-service/windows/win-app-database.hpp
+		src/services/app-service/windows/win-app-database.cpp
+		src/services/global-shortcuts/windows-global-shortcut-backend.hpp
+		src/services/global-shortcuts/windows-global-shortcut-backend.cpp
+	)
+	list(APPEND LIBS shell32 ole32 shlwapi user32 gdi32 advapi32 version windowsapp)
 else()
 	list(APPEND SRCS
 		src/services/app-runtime/linux/linux-app-runtime.hpp
@@ -893,6 +903,8 @@ endif()
 
 
 qt_add_executable(${TARGET} ${SRCS})
+
+vicinae_enable_utf8(${TARGET})
 
 if(APPLE)
 	set(VICINAE_BUNDLE_EXECUTABLE "Vicinae")
