@@ -708,6 +708,21 @@ elseif (WIN32)
 		src/services/paste/windows-paste-service.cpp
 		src/services/files-service/windows/win-file-indexer.hpp
 		src/services/files-service/windows/win-file-indexer.cpp
+		src/services/window-manager/windows/windows-window.hpp
+		src/services/window-manager/windows/virtual-desktops.hpp
+		src/services/window-manager/windows/virtual-desktops.cpp
+		src/services/window-manager/windows/windows-window-manager.hpp
+		src/services/window-manager/windows/windows-window-manager.cpp
+		src/services/app-runtime/windows/win-app-runtime.hpp
+		src/services/app-runtime/windows/win-app-runtime.cpp
+		src/root-search/windows-settings/windows-settings-root-provider.hpp
+		src/root-search/windows-settings/windows-settings-root-provider.cpp
+		src/root-search/control-panel/control-panel-root-provider.hpp
+		src/root-search/control-panel/control-panel-root-provider.cpp
+		src/services/url-scheme/win-url-scheme-registrar.hpp
+		src/services/url-scheme/win-url-scheme-registrar.cpp
+		src/services/wallpaper/windows/windows-wallpaper-backend.hpp
+		src/services/wallpaper/windows/windows-wallpaper-backend.cpp
 	)
 	list(APPEND LIBS shell32 ole32 shlwapi user32 gdi32 advapi32 version windowsapp dwmapi comctl32 uuid)
 else()
@@ -1171,7 +1186,10 @@ else()
 	message(STATUS "Precompiled headers are disabled")
 endif()
 
-if(NOT APPLE)
+if(WIN32)
+	include(WindowsDeploy)
+	vicinae_windows_deploy(${TARGET})
+elseif(NOT APPLE)
 	install(TARGETS ${TARGET}
 		RUNTIME DESTINATION ${VICINAE_LIBEXEC_DIR}
 	)

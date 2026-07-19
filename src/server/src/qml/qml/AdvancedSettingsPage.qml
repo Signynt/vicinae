@@ -11,6 +11,10 @@ Flickable {
 
     readonly property var model: settings.generalModel
 
+    ViciWheelHandler {
+        target: root
+    }
+
     ScrollBar.vertical: ViciScrollBar {
         policy: root.contentHeight > root.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
     }
@@ -43,6 +47,15 @@ Flickable {
                 SettingsToggle {
                     checked: root.model.activateOnSingleClick
                     onToggled: root.model.activateOnSingleClick = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Wrap navigation"
+                description: "Wrap around to the opposite end when moving past the first or last item."
+                SettingsToggle {
+                    checked: root.model.wrapNavigation
+                    onToggled: root.model.wrapNavigation = checked
                 }
             }
 
