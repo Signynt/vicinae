@@ -1,5 +1,6 @@
 #pragma once
 #include "bridge-view.hpp"
+#include "ui/action-pannel/action.hpp"
 #include <qtimer.h>
 
 class RootSearchModel;
@@ -20,9 +21,16 @@ public:
   void beforePop() override;
 
   QObject *listModel() const;
-  Q_INVOKABLE bool tryAliasFastTrack();
+
+protected:
+  bool inputFilter(QKeyEvent *) override;
+  void refreshClock();
+  void beforeActionExecuted(const AbstractAction *action) override;
+  bool tryAliasFastTrack();
 
 private:
+  bool m_textChangedByHistory = false;
+  std::optional<int> m_historyOffset;
   QTimer *m_clockTimer = new QTimer(this);
   RootSearchModel *m_model = nullptr;
 };
