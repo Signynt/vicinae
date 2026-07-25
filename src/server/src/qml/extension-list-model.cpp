@@ -47,6 +47,8 @@ void ExtensionListSection::onSelected(int i) {
   if (m_onItemSelected) m_onItemSelected(&itemAt(i));
 }
 
+QString ExtensionListSection::itemId(int i) const { return QString::fromStdString(itemAt(i).id); }
+
 QString ExtensionListSection::itemTitle(int i) const { return QString::fromStdString(itemAt(i).title); }
 
 QString ExtensionListSection::itemSubtitle(int i) const { return QString::fromStdString(itemAt(i).subtitle); }
@@ -135,9 +137,9 @@ void ExtensionListModel::setExtensionData(const ListModel &model, bool resetSele
     refreshActionPanel();
   }
 
-  refreshCurrentDetail();
-
   if (wasShowingDetail != m_model.isShowingDetail) emit isShowingDetailChanged();
+
+  refreshCurrentDetail();
 
   emit emptyViewChanged();
 }
@@ -184,12 +186,12 @@ void ExtensionListModel::setFilter(const QString &text) {
 }
 
 QString ExtensionListModel::searchPlaceholder() const {
-  return m_placeholder.isEmpty() ? QStringLiteral("Search...") : m_placeholder;
+  return m_placeholder.isEmpty() ? tr("Search...") : m_placeholder;
 }
 
 QString ExtensionListModel::emptyTitle() const {
   if (m_model.emptyView) return QString::fromStdString(m_model.emptyView->title);
-  return QStringLiteral("No results");
+  return tr("No results");
 }
 
 QString ExtensionListModel::emptyDescription() const {

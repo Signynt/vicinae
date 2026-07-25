@@ -1,20 +1,23 @@
 #include "root-view-host.hpp"
 #include "root-search-model.hpp"
 #include "section-source.hpp"
+#include "service-registry.hpp"
 #include "services/keybinding/keybinding-service.hpp"
 #include "view-scope.hpp"
 #include <qevent.h>
 
 void RootViewHost::initialize() {
   using namespace std::chrono_literals;
+  auto cfgService = context()->services->config();
 
   BaseView::initialize();
   m_model = new RootSearchModel(ViewScope(context(), this), this);
-  m_clockTimer->setInterval(1min);
-  m_clockTimer->start();
-  refreshClock();
+  scheduleNextClockTick();
 
-  connect(m_clockTimer, &QTimer::timeout, this, &RootViewHost::refreshClock);
+  connect(cfgService, &config::Manager::configChanged, this,
+          [this](const auto &next, const auto &prev) { scheduleNextClockTick(); });
+
+  connect(m_clockTimer, &QTimer::timeout, this, &RootViewHost::scheduleNextClockTick);
   connect(m_model, &SectionListModel::itemSelected, this, [this](SectionSource *source, int itemIdx) {
     if (auto panel = source->actionPanel(itemIdx))
       setActions(std::move(panel));
@@ -26,11 +29,35 @@ void RootViewHost::initialize() {
   m_model->setFilter({});
 }
 
-void RootViewHost::refreshClock() {
-  QLocale locale;
-  QString timeStr = locale.toString(QTime::currentTime(), QLocale::ShortFormat);
+void RootViewHost::scheduleNextClockTick() {
+  auto &config = context()->services->config()->value();
+  auto &cc = config.launcherWindow.clock;
   ViewScope scope(context(), this);
-  scope.setNavigationTitle(timeStr);
+
+  if (!cc.enabled) {
+    context()->navigation->setNavigationTitle("");
+    m_clockTimer->stop();
+    return;
+  }
+
+  {
+    QLocale locale;
+    QString timeStr;
+
+    if (cc.format) {
+      timeStr = locale.toString(QDateTime::currentDateTime(), QString::fromStdString(*cc.format));
+    } else {
+      timeStr = locale.toString(QTime::currentTime(), QLocale::ShortFormat);
+    }
+
+    scope.setNavigationTitle(timeStr);
+  }
+
+  auto delta = cc.interval - (QDateTime::currentSecsSinceEpoch() % cc.interval);
+
+  m_clockTimer->setInterval(std::chrono::seconds(delta));
+  m_clockTimer->setSingleShot(true);
+  m_clockTimer->start();
 }
 
 QUrl RootViewHost::qmlComponentUrl() const { return QUrl(QStringLiteral("qrc:/Vicinae/RootSearchList.qml")); }

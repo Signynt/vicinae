@@ -12,7 +12,7 @@ class RootViewHost : public ViewHostBase {
 public:
   QUrl qmlComponentUrl() const override;
   QVariantMap qmlProperties() override;
-  QString initialSearchPlaceholderText() const override { return QStringLiteral("Search for anything..."); }
+  QString initialSearchPlaceholderText() const override { return tr("Search for anything..."); }
   bool showBackButton() const override { return false; }
 
   void initialize() override;
@@ -24,9 +24,9 @@ public:
 
 protected:
   bool inputFilter(QKeyEvent *) override;
-  void refreshClock();
   void beforeActionExecuted(const AbstractAction *action) override;
   bool tryAliasFastTrack();
+  void scheduleNextClockTick();
 
 private:
   bool m_textChangedByHistory = false;

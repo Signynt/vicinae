@@ -3,7 +3,7 @@ set(CMAKE_AUTORCC ON)
 set(LIBS)
 set(TARGET vicinae-server)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network Svg Concurrent Quick Qml GuiPrivate QuickDialogs2 QuickControls2 ShaderTools)
+find_package(Qt6 REQUIRED COMPONENTS Core Network Svg Concurrent Quick Qml GuiPrivate QuickDialogs2 QuickControls2 ShaderTools LinguistTools)
 
 if (USE_SYSTEM_KF6 AND NOT WIN32)
 	find_package(KF6SyntaxHighlighting REQUIRED)
@@ -231,7 +231,6 @@ set(SRCS
 		src/ui/image/url.hpp
 
 
-	src/create-quicklink-command.hpp
 
 	src/builtin_icon.cpp
 
@@ -642,6 +641,8 @@ if (APPLE)
 		src/root-search/macos-settings/macos-settings-root-provider.mm
 		src/services/global-shortcuts/macos-global-shortcut-backend.hpp
 		src/services/global-shortcuts/macos-global-shortcut-backend.cpp
+		src/internal/keyboard/keyboard-macos.hpp
+		src/internal/keyboard/keyboard-macos.cpp
 		src/services/files-service/macos/spotlight-file-indexer.hpp
 		src/services/files-service/macos/spotlight-file-indexer.mm
 		src/services/tray/macos/tray-service-macos.hpp
@@ -1186,6 +1187,25 @@ if (USE_PRECOMPILED_HEADERS)
 else()
 	message(STATUS "Precompiled headers are disabled")
 endif()
+
+# Include sources excluded from the current platform's target.
+file(GLOB_RECURSE VICINAE_I18N_SOURCES CONFIGURE_DEPENDS
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.mm)
+
+qt_add_translations(${TARGET}
+	SOURCE_TARGETS ${TARGET}
+	TS_FILE_BASE vicinae
+	TS_FILES
+		${CMAKE_CURRENT_SOURCE_DIR}/translations/vicinae_fr.ts
+		${CMAKE_CURRENT_SOURCE_DIR}/translations/vicinae_zh_CN.ts
+	PLURALS_TS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/translations/vicinae_en.ts
+	SOURCES ${VICINAE_I18N_SOURCES}
+	LUPDATE_OPTIONS -locations relative -no-obsolete
+	MERGE_QT_TRANSLATIONS
+	QT_TRANSLATION_CATALOGS qtbase qtdeclarative
+)
 
 if(WIN32)
 	include(WindowsDeploy)
